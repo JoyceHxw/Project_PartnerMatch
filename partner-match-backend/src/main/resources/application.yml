@@ -1,0 +1,37 @@
+# 连接池配置
+spring:
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    druid:
+      url: jdbc:mysql:///hxw
+      username: root
+      password: 2214563
+      driver-class-name: com.mysql.cj.jdbc.Driver
+  session:
+    timeout: 86400
+    store-type: redis #存储session
+  data:
+    redis:
+      port: 6379
+      host: localhost
+      database: 0
+
+mybatis-plus:
+  type-aliases-package: com.hxw.partnermatch.model
+  global-config:
+    db-config:
+      logic-delete-field: isDeleted  #全局逻辑删除
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl #输出sql语句
+
+
+server:
+  servlet:
+    context-path: /api
+    session:
+      cookie:
+        domain: localhost
+        secure: true
+        same-site: none #谷歌浏览器same-site会阻止跨域
+  port: 8080
+#  address: 0:0:0:0
