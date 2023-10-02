@@ -19,3 +19,10 @@
 - Redisson分布式锁
 - postman对接口进行测试
 ## 页面展示
+![](https://github.com/JoyceHxw/Project_PartnerMatch/blob/main/login.png)
+![](https://github.com/JoyceHxw/Project_PartnerMatch/blob/main/index.png)
+![](https://github.com/JoyceHxw/Project_PartnerMatch/blob/main/search.png)
+![](https://github.com/JoyceHxw/Project_PartnerMatch/blob/main/team.png)
+![](https://github.com/JoyceHxw/Project_PartnerMatch/blob/main/blog.png)
+![](https://github.com/JoyceHxw/Project_PartnerMatch/blob/main/chat1.png) ![](https://github.com/JoyceHxw/Project_PartnerMatch/blob/main/chat2.png) ![](https://github.com/JoyceHxw/Project_PartnerMatch/blob/main/chat3.png)
+![](https://github.com/JoyceHxw/Project_PartnerMatch/blob/main/user.png)
