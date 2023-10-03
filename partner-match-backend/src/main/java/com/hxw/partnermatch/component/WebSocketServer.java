@@ -9,6 +9,7 @@ import com.hxw.partnermatch.model.requests.Message;
 import com.hxw.partnermatch.model.responses.ChatUserResult;
 import com.hxw.partnermatch.service.ChatService;
 import com.hxw.partnermatch.service.UserService;
+import com.hxw.partnermatch.utils.Result;
 import com.hxw.partnermatch.utils.ResultCodeEnum;
 import jakarta.websocket.*;
 import jakarta.websocket.server.PathParam;
@@ -141,11 +142,8 @@ public class WebSocketServer {
         }
     }
 
-    private void save(Chat chat){
-        boolean result = chatService.save(chat);
-        if(!result){
-            throw new BusinessException(ResultCodeEnum.SYSTEM_ERROR,"消息保存错误");
-        }
+    private Result save(Chat chat){
+        return chatService.saveChat(chat);
     }
 
     private String getKey(Long id, Integer type){

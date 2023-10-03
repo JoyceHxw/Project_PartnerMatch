@@ -122,6 +122,8 @@ public class ChatServiceImpl extends ServiceImpl<ChatMapper, Chat>
                 chatResultList.add(chatResult);
             }
         }
+        //4.按时间顺序排列
+        chatResultList.sort(Comparator.comparing(ChatResult::getLatestTime).reversed());
         return Result.ok(chatResultList);
     }
 
@@ -158,6 +160,7 @@ public class ChatServiceImpl extends ServiceImpl<ChatMapper, Chat>
                 chatResultList.add(chatResult);
             }
         }
+        chatResultList.sort(Comparator.comparing(ChatResult::getLatestTime).reversed());
         return Result.ok(chatResultList);
     }
 
@@ -170,13 +173,12 @@ public class ChatServiceImpl extends ServiceImpl<ChatMapper, Chat>
      */
     public List<Chat> getUserChat(Long userId, Long currentUserId, int type){
         //如果有缓存，直接读取缓存
-        //但是当聊天记录增加时，不能及时获取最新聊天记录
-//        String redisKey=String.format("hxw:partnermatch:userchat:%s%s%s",currentUserId,userId,type);
-//        ValueOperations<String,Object> valueOperations=redisTemplate.opsForValue();
-//        List<Chat> chatList=(List<Chat>) valueOperations.get(redisKey);
-//        if(chatList!=null){
-//            return chatList;
-//        }
+        String redisKey=String.format("hxw:partnermatch:userchat:%s%s%s",currentUserId,userId,type);
+        ValueOperations<String,Object> valueOperations=redisTemplate.opsForValue();
+        List<Chat> chatList=(List<Chat>) valueOperations.get(redisKey);
+        if(chatList!=null){
+            return chatList;
+        }
         LambdaQueryWrapper<Chat> queryWrapper=new LambdaQueryWrapper<>();
         //互相发送的消息
         queryWrapper.eq(Chat::getType,type)
@@ -184,12 +186,12 @@ public class ChatServiceImpl extends ServiceImpl<ChatMapper, Chat>
                         .or()
                         .eq(Chat::getToId,currentUserId).eq(Chat::getFromId,userId));
         List<Chat> chatList1 = this.list(queryWrapper);
-//        try{
-//            //注意设置缓存过期时间，redis内存不能无限期增加
-//            valueOperations.set(redisKey,chatList1,30000, TimeUnit.MILLISECONDS);
-//        } catch (Exception e){
-//            log.error("redis set key error",e);
-//        }
+        try{
+            //注意设置缓存过期时间，redis内存不能无限期增加
+            valueOperations.set(redisKey,chatList1,30000, TimeUnit.MILLISECONDS);
+        } catch (Exception e){
+            log.error("redis set key error",e);
+        }
         return chatList1;
     }
 
@@ -200,24 +202,62 @@ public class ChatServiceImpl extends ServiceImpl<ChatMapper, Chat>
      * @return
      */
     public List<Chat> getTeamChat(Long teamId, int type){
-//        String redisKey=String.format("hxw:partnermatch:teamchat:%s%s",teamId,type);
-//        ValueOperations<String,Object> valueOperations=redisTemplate.opsForValue();
-//        //如果有缓存，直接读取缓存
-//        List<Chat> chatList=(List<Chat>) valueOperations.get(redisKey);
-//        if(chatList!=null){
-//            return chatList;
-//        }
+        String redisKey=String.format("hxw:partnermatch:teamchat:%s%s",teamId,type);
+        ValueOperations<String,Object> valueOperations=redisTemplate.opsForValue();
+        //如果有缓存，直接读取缓存
+        List<Chat> chatList=(List<Chat>) valueOperations.get(redisKey);
+        if(chatList!=null){
+            return chatList;
+        }
         LambdaQueryWrapper<Chat> queryWrapper=new LambdaQueryWrapper<>();
         //互相发送的消息
         queryWrapper.eq(Chat::getType,type).eq(Chat::getToId,teamId);
         List<Chat> chatList1 = this.list(queryWrapper);
-//        try{
-//            //注意设置缓存过期时间，redis内存不能无限期增加
-//            valueOperations.set(redisKey,chatList1,30000, TimeUnit.MILLISECONDS);
-//        } catch (Exception e){
-//            log.error("redis set key error",e);
-//        }
+        try{
+            //注意设置缓存过期时间，redis内存不能无限期增加
+            valueOperations.set(redisKey,chatList1,30000, TimeUnit.MILLISECONDS);
+        } catch (Exception e){
+            log.error("redis set key error",e);
+        }
         return chatList1;
+    }
+
+    @Override
+    public Result saveChat(Chat chat) {
+        Long toId = chat.getToId();
+        Long fromId = chat.getFromId();
+        Integer type = chat.getType();
+        ValueOperations<String,Object> valueOperations=redisTemplate.opsForValue();
+        //更新redis
+        if(type==0){
+            //消息的发送和接收方的聊天记录都要更新
+            String redisKey1=String.format("hxw:partnermatch:userchat:%s%s%s",toId,fromId,type);
+            List<Chat> chatList1=(List<Chat>) valueOperations.get(redisKey1);
+            if(chatList1!=null){
+                chatList1.add(chat);
+                valueOperations.set(redisKey1,chatList1,30000, TimeUnit.MILLISECONDS);
+            }
+            String redisKey2=String.format("hxw:partnermatch:userchat:%s%s%s",fromId,toId,type);
+            List<Chat> chatList2=(List<Chat>) valueOperations.get(redisKey2);
+            if(chatList2!=null){
+                chatList2.add(chat);
+                valueOperations.set(redisKey2,chatList2,30000, TimeUnit.MILLISECONDS);
+            }
+        }
+        else{
+            String redisKeyTeam=String.format("hxw:partnermatch:teamchat:%s%s",toId,type);
+            List<Chat> chatListTeam=(List<Chat>) valueOperations.get(redisKeyTeam);
+            if(chatListTeam!=null){
+                chatListTeam.add(chat);
+                valueOperations.set(redisKeyTeam,chatListTeam,30000, TimeUnit.MILLISECONDS);
+            }
+        }
+        //更新mysql
+        boolean save = this.save(chat);
+        if(!save){
+            throw new BusinessException(ResultCodeEnum.SYSTEM_ERROR,"保存错误");
+        }
+        return Result.ok(save);
     }
 }
 

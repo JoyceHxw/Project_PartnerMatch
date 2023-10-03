@@ -37,4 +37,11 @@ public interface ChatService extends IService<Chat> {
      * @return
      */
     Result getChatTeamList(int type, HttpServletRequest request);
+
+    /**
+     * 保存数据在mysql，更新redis中
+     * @param chat
+     * @return
+     */
+    Result saveChat(Chat chat);
 }
