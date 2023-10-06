@@ -25,19 +25,7 @@
             <van-button v-if="showButton('/user/myBlog')" size="mini" @click="doDelete(blog.id)">删除</van-button>
         </div>
     </van-cell-group>
-    <!-- <van-card @click="goToBlog"
-        v-for="blog in props.blogList"
-        :desc="blog.content"
-        :title="blog.title" 
-        :thumb="blog.avatar"
-        :num="formatDate(new Date(blog.createTime), 'yyyy-MM-dd hh:mm')"
-    >
-        <template #footer>
-            <van-button v-if="showButton('/user/myBlog')" size="mini" @click="doEdit(blog.id)">编辑</van-button>
-            <van-button v-if="showButton('/user/myBlog')" size="mini" @click="doDelete(blog.id)">删除</van-button>
-        </template>
-    </van-card>
-    <van-empty v-if="!blogList || blogList.length<1" description="没有相关用户" /> -->
+    <van-empty v-if="!blogList || blogList.length<1" description="没有相关博文" />
 </template>
 
 <script setup lang="ts">

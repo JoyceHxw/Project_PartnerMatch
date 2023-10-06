@@ -71,7 +71,7 @@ const originTagList=[
 
 let tagList=ref(originTagList);
 
-const activeIds = ref(JSON.parse(editUser.value.currentValue));
+const activeIds = ref(JSON.parse(editUser.value.currentValue) || []);
 const activeIndex = ref(0);
 
 

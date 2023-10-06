@@ -128,7 +128,7 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
         isRelative=teamSearchRequest.getIsRelative();
         //筛选加入的队伍
         List<Long> idList = teamSearchRequest.getIdList();
-        if(idList!=null){
+        if(!CollectionUtils.isEmpty(idList)){
             queryWrapper.in(Team::getId,idList);
         }
         String searchText = teamSearchRequest.getSearchText();
@@ -161,7 +161,7 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
             queryWrapper.ne(Team::getStatus,1);
         }
         //不展示已过期队伍，注意queryWrapper写法
-        queryWrapper.and(qw->qw.gt(Team::getExpireTime,new Date()).or().isNull(Team::getExpireTime));
+        queryWrapper.and(qw->qw.isNull(Team::getExpireTime).or().gt(Team::getExpireTime,new Date()));
 //        queryWrapper.gt(Team::getExpireTime,new Date()).or().isNull(Team::getExpireTime);
 //        List<Team> teamList = this.list(queryWrapper);
         //改成分页查询
@@ -191,6 +191,8 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
         queryWrapper.eq(UserTeam::getUserId,userId);
         List<UserTeam> teamList = userTeamService.list(queryWrapper);
         List<Long> teamIdList=new ArrayList<>();
+        //传入初始值，使得后续searchTeam查询进入筛选条件
+        teamIdList.add(0L);
         for (UserTeam userTeam : teamList) {
             teamIdList.add(userTeam.getTeamId());
         }

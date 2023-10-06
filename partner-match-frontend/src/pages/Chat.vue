@@ -15,6 +15,7 @@
                 </template>
             </van-cell>
             </van-cell-group>
+            <van-empty v-if="!userList || userList.length<1" description="暂无消息" />
         </van-tab>
         <van-tab title="群聊">
             <van-cell-group v-for="team in teamList">
@@ -31,6 +32,7 @@
                 </template>
             </van-cell>
             </van-cell-group>
+            <van-empty v-if="!teamList || teamList.length<1" description="暂无消息" />
         </van-tab>
     </van-tabs>
     
