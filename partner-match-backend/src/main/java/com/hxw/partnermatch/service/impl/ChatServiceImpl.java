@@ -28,6 +28,8 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import static com.hxw.partnermatch.utils.RedisConstant.*;
+
 /**
 * @author 81086
 * @description 针对表【chat(消息表)】的数据库操作Service实现
@@ -173,7 +175,7 @@ public class ChatServiceImpl extends ServiceImpl<ChatMapper, Chat>
      */
     public List<Chat> getUserChat(Long userId, Long currentUserId, int type){
         //如果有缓存，直接读取缓存
-        String redisKey=String.format("hxw:partnermatch:userchat:%s%s%s",currentUserId,userId,type);
+        String redisKey=String.format(CHAT_RECORD_PRIVATE_KEY+"%d%d%d",currentUserId,userId,type);
         ValueOperations<String,Object> valueOperations=redisTemplate.opsForValue();
         List<Chat> chatList=(List<Chat>) valueOperations.get(redisKey);
         if(chatList!=null){
@@ -202,7 +204,7 @@ public class ChatServiceImpl extends ServiceImpl<ChatMapper, Chat>
      * @return
      */
     public List<Chat> getTeamChat(Long teamId, int type){
-        String redisKey=String.format("hxw:partnermatch:teamchat:%s%s",teamId,type);
+        String redisKey=String.format(CHAT_RECORD_TEAM_KEY+"%d%d",teamId,type);
         ValueOperations<String,Object> valueOperations=redisTemplate.opsForValue();
         //如果有缓存，直接读取缓存
         List<Chat> chatList=(List<Chat>) valueOperations.get(redisKey);
@@ -231,13 +233,13 @@ public class ChatServiceImpl extends ServiceImpl<ChatMapper, Chat>
         //更新redis
         if(type==0){
             //消息的发送和接收方的聊天记录都要更新
-            String redisKey1=String.format("hxw:partnermatch:userchat:%s%s%s",toId,fromId,type);
+            String redisKey1=String.format(CHAT_RECORD_PRIVATE_KEY+"%d%d%d",toId,fromId,type);
             List<Chat> chatList1=(List<Chat>) valueOperations.get(redisKey1);
             if(chatList1!=null){
                 chatList1.add(chat);
                 valueOperations.set(redisKey1,chatList1,30000, TimeUnit.MILLISECONDS);
             }
-            String redisKey2=String.format("hxw:partnermatch:userchat:%s%s%s",fromId,toId,type);
+            String redisKey2=String.format(CHAT_RECORD_PRIVATE_KEY+"%d%d%d",fromId,toId,type);
             List<Chat> chatList2=(List<Chat>) valueOperations.get(redisKey2);
             if(chatList2!=null){
                 chatList2.add(chat);
@@ -245,7 +247,7 @@ public class ChatServiceImpl extends ServiceImpl<ChatMapper, Chat>
             }
         }
         else{
-            String redisKeyTeam=String.format("hxw:partnermatch:teamchat:%s%s",toId,type);
+            String redisKeyTeam=String.format(CHAT_RECORD_TEAM_KEY+"%d%d",toId,type);
             List<Chat> chatListTeam=(List<Chat>) valueOperations.get(redisKeyTeam);
             if(chatListTeam!=null){
                 chatListTeam.add(chat);

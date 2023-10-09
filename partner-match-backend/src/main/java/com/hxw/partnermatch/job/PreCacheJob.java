@@ -18,6 +18,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import static com.hxw.partnermatch.utils.RedisConstant.CACHE_USER_LOCK_KEY;
+import static com.hxw.partnermatch.utils.RedisConstant.RECOMMEND_USER_KEY;
+
 /**
  * 缓存预热，使第一次加载从内存中读取
  */
@@ -40,7 +43,7 @@ public class PreCacheJob {
     @Scheduled(cron="0 35 16 * * *")
     public void doCacheRecommendUser(){
         //像Redis存储数据一样，设置锁的键
-        RLock lock=redissonClient.getLock("hxw:partnermatch:docache:lock");
+        RLock lock=redissonClient.getLock(CACHE_USER_LOCK_KEY);
         try {
             //等待时间为0，只有一个线程能获取到锁
             //注意设置失效时间
@@ -48,7 +51,7 @@ public class PreCacheJob {
             if(lock.tryLock(0,-1,TimeUnit.MILLISECONDS)){
 //                Thread.sleep(300000); 自动续时
                 for(Long userId: mainUserList){
-                    String redisKey=String.format("hxw:partnermatch:recommend:%s",userId);
+                    String redisKey=String.format(RECOMMEND_USER_KEY+"%d",userId);
                     ValueOperations<String,Object> valueOperations=redisTemplate.opsForValue();
                     //写缓存
                     LambdaQueryWrapper<User> queryWrapper=new LambdaQueryWrapper<>();

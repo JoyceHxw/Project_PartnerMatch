@@ -1,19 +1,16 @@
 package com.hxw.partnermatch.interceptor;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hxw.partnermatch.exception.BusinessException;
 import com.hxw.partnermatch.model.User;
 import com.hxw.partnermatch.utils.Result;
 import com.hxw.partnermatch.utils.ResultCodeEnum;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.stereotype.Component;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 import static com.hxw.partnermatch.utils.UserConstant.USER_LOGIN_STATE;
 
-@Component
+
 public class LoginInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {

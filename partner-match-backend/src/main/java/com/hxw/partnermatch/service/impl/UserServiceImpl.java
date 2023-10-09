@@ -4,33 +4,32 @@ import com.alibaba.druid.util.StringUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.hxw.partnermatch.exception.BusinessException;
 import com.hxw.partnermatch.mapper.UserMapper;
-import com.hxw.partnermatch.model.Team;
 import com.hxw.partnermatch.model.User;
 import com.hxw.partnermatch.model.requests.TagsSearchRequest;
 import com.hxw.partnermatch.model.responses.TagDistance;
 import com.hxw.partnermatch.service.UserService;
 import com.hxw.partnermatch.utils.*;
+import io.swagger.v3.oas.models.security.SecurityScheme;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.stereotype.Service;
-import org.springframework.util.CollectionUtils;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
-import static com.hxw.partnermatch.utils.UserConstant.ADMIN_ROLE;
+import static com.hxw.partnermatch.utils.RedisConstant.*;
 import static com.hxw.partnermatch.utils.UserConstant.USER_LOGIN_STATE;
+import static com.hxw.partnermatch.utils.UserConstant.ADMIN_ROLE;
+
 
 /**
 * @author 81086
@@ -171,8 +170,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         int min = 1000;  // 最小值为1000
         int max = 9999;  // 最大值为9999
         int code = random.nextInt(max - min + 1) + min;
-        this.code=code;
-        System.out.println(code);
+        //4.保存验证码到redis中，设置过期时间
+        redisTemplate.opsForValue().set(LOGIN_CODE_KEY+phone,code,LOGIN_CODE_TTL,TimeUnit.MINUTES);
+        System.out.println("登录验证码为："+code);
         return Result.ok(code,"验证码发送成功");
     }
 
@@ -189,8 +189,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         if(user==null){
             throw new BusinessException(ResultCodeEnum.PARAMS_ERROR,"电话不存在");
         }
-        //2.验证验证码是否正确
-        if(!this.code.equals(code)){
+        //2.验证验证码是否正确，从redis中获取
+        Object o = redisTemplate.opsForValue().get(LOGIN_CODE_KEY + phone);
+        if(o==null){
+            throw new BusinessException(ResultCodeEnum.PARAMS_ERROR,"验证码已过期");
+        }
+        int code_redis=(Integer) o;
+        if(code!=code_redis){
             throw new BusinessException(ResultCodeEnum.PARAMS_ERROR,"验证码错误");
         }
         //3.返回用户数据
@@ -297,7 +302,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         //对于数据量庞大，查询需要花费较长时间时，使用缓存
         User currentUser=getCurrentUser(request);
         //不同用户展现的数据不同，用redis的Key-Value存储在缓存中
-        String redisKey=String.format("hxw:partnermatch:recommend:%s",currentUser.getId());
+        String redisKey=String.format(RECOMMEND_USER_KEY+"%d",currentUser.getId());
         ValueOperations<String,Object> valueOperations=redisTemplate.opsForValue();
         List<Long> userIdList;
         //如果有缓存，直接读取缓存
