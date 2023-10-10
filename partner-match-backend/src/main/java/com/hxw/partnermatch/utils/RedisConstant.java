@@ -10,6 +10,14 @@ public class RedisConstant {
      */
     public static final Long LOGIN_CODE_TTL=5L;
     /**
+     * 用户token
+     */
+    public static final String LOGIN_USER_TOKEN_KEY="hxw:partnermatch:login:token:";
+    /**
+     * token有效期
+     */
+    public static final Long LOGIN_USER_TOKEN_TTL=30L;
+    /**
      * redisson分布式锁
      */
     public static final String CACHE_USER_LOCK_KEY="hxw:partnermatch:cache:lock";

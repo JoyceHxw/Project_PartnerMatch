@@ -12,7 +12,13 @@ import { showFailToast } from 'vant';
 const userList=ref([]);
 const pageNum=ref(1);
 
+let isLoading = false;
+
 const getUserList=async()=>{
+    if (isLoading) {
+        return;
+    }
+    isLoading = true;
     const response =await myAxios.post('/user/recommend',{
         'pageNum':pageNum.value,
         'pageSize':10,
@@ -26,6 +32,7 @@ const getUserList=async()=>{
     else{
         showFailToast("队伍信息加载失败");
     }
+    isLoading = false;
 }
 
 window.addEventListener('scroll', () => {
@@ -38,30 +45,6 @@ window.addEventListener('scroll', () => {
 
 onMounted(async ()=>{
     getUserList();
-    // const userListResult =await myAxios.post('/user/recommend',{
-    //     'pageNum':pageNum.value,
-    //     'pageSize':10
-    // })
-    // .then(function (response: any) {
-    //     // 处理成功情况
-    //     // console.log(response.data);
-    //     return response.data;
-    // })
-    // .catch(function (error: any) {
-    //     // 处理错误情况
-    //     console.log(error);
-    // })
-    // if(userListResult){
-    //     userListResult.forEach((user: { tags: string; }) =>{
-    //         try {
-    //             user.tags = JSON.parse(user.tags);
-    //         } catch (error) {
-    //             user.tags = "";
-    //         }
-
-    //     })
-    //     userList.value=userListResult;
-    // }
 })
 
 </script>

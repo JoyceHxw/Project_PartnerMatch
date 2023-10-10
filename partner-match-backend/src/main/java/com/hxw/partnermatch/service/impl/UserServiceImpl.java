@@ -1,5 +1,7 @@
 package com.hxw.partnermatch.service.impl;
 
+import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.lang.UUID;
 import com.alibaba.druid.util.StringUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -16,6 +18,7 @@ import com.hxw.partnermatch.utils.*;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
@@ -49,9 +52,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
     //密码加密加盐
     private static final String SALT="hxw";
-
-    //验证码
-    private Integer code;
 
 
     @Override
@@ -147,9 +147,17 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         }
         //6.返回用户数据，用户脱敏
         loginUser.setPassword(""); //不返回密码
-        //7.记录用户的登录态
-        request.getSession().setAttribute(USER_LOGIN_STATE,loginUser);
-        return Result.ok(null,"登录成功");
+        //7.在session中记录用户的登录态
+        //request.getSession().setAttribute(USER_LOGIN_STATE,loginUser);
+        //把用户数据保存在redis中
+        //随机生成token
+        String token= UUID.randomUUID().toString(true);
+//        Map<String,Object> userMap=BeanUtil.beanToMap(user);
+//        redisTemplate.opsForHash().putAll(LOGIN_USER_TOKEN_KEY+token,userMap);
+        redisTemplate.opsForValue().set(LOGIN_USER_TOKEN_KEY+token,loginUser);
+        //设置有效期
+        redisTemplate.expire(LOGIN_USER_TOKEN_KEY+token,LOGIN_USER_TOKEN_TTL,TimeUnit.MINUTES);
+        return Result.ok(token,"登录成功");
     }
 
     @Override
@@ -201,14 +209,26 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         //3.返回用户数据
         user.setPassword(""); //不返回密码
         //3.记录用户的登录态
-        request.getSession().setAttribute(USER_LOGIN_STATE,user);
-        return Result.ok(null,"登录成功");
+        //request.getSession().setAttribute(USER_LOGIN_STATE,user);
+        //把用户数据保存在redis中
+        //随机生成token
+        String token= UUID.randomUUID().toString(true);
+//        Map<String,Object> userMap=BeanUtil.beanToMap(user);
+//        redisTemplate.opsForHash().putAll(LOGIN_USER_TOKEN_KEY+token,userMap);
+        redisTemplate.opsForValue().set(LOGIN_USER_TOKEN_KEY+token,user);
+        //设置有效期
+        redisTemplate.expire(LOGIN_USER_TOKEN_KEY+token,LOGIN_USER_TOKEN_TTL,TimeUnit.MINUTES);
+        return Result.ok(token,"登录成功");
 
     }
 
     @Override
     public Result logout(HttpServletRequest request) {
-        request.getSession().removeAttribute(USER_LOGIN_STATE);
+//        request.getSession().removeAttribute(USER_LOGIN_STATE);
+        //清除redis和线程
+        UserHolder.removeUser();
+        String token=request.getHeader("Authorization");
+        redisTemplate.delete(LOGIN_USER_TOKEN_KEY + token);
         return Result.ok(null,"退出成功");
     }
 
@@ -280,18 +300,34 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
     @Override
     public User getCurrentUser(HttpServletRequest request) {
-        if(request==null){
-            throw new BusinessException(ResultCodeEnum.SYSTEM_ERROR);
-        }
-        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
-        User user=(User) userObj;
+//        if(request==null){
+//            throw new BusinessException(ResultCodeEnum.SYSTEM_ERROR);
+//        }
+//        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
+//        User user=(User) userObj;
+//        if(user==null){
+//            throw new BusinessException(ResultCodeEnum.NO_AUTH,"未登录");
+//        }
+//        Long id = user.getId();
+//        User userInfo = userMapper.selectById(id);
+//        userInfo.setPassword("");
+//        return userInfo;
+//        String token=request.getHeader("Authorization");
+//        if(org.apache.commons.lang3.StringUtils.isBlank(token)){
+//            throw new BusinessException(ResultCodeEnum.NO_AUTH,"未登录");
+//        }
+//        Map<Object, Object> userMap = redisTemplate.opsForHash().entries(LOGIN_USER_TOKEN_KEY + token);
+//        if(userMap.isEmpty()){
+//            throw new BusinessException(ResultCodeEnum.NO_AUTH,"未登录");
+//        }
+//        User user = BeanUtil.fillBeanWithMap(userMap, new User(), false);
+//        user.setPassword("");
+//        return user;
+        User user=UserHolder.getUser();
         if(user==null){
-            throw new BusinessException(ResultCodeEnum.NO_AUTH,"未登录");
+            throw new BusinessException(ResultCodeEnum.NO_AUTH, "未登录");
         }
-        Long id = user.getId();
-        User userInfo = userMapper.selectById(id);
-        userInfo.setPassword("");
-        return userInfo;
+        return user;
     }
 
     @Override

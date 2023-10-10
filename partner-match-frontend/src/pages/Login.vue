@@ -80,8 +80,10 @@ const onSubmitPwd = async () => {
         account: account.value,
         password: password.value,
     })
-    console.log(response);
     if(response.code===200){
+        //保存token
+        sessionStorage.setItem("token",response.data);
+        console.log(sessionStorage);
         showSuccessToast('登录成功');
         router.replace('/');
     }
@@ -133,8 +135,9 @@ const onSubmitSms = async () => {
         phone: phone.value,
         code: code.value,
     })
-    console.log(response);
     if(response.code===200){
+        //保存token
+        sessionStorage.setItem("token",response.data);
         showSuccessToast('登录成功');
         router.replace('/');
     }
