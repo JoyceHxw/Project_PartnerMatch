@@ -290,6 +290,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         if(!isAdmin(request) && !Objects.equals(user.getId(), currentUser.getId())){
             throw new BusinessException(ResultCodeEnum.NO_AUTH,"没有修改权限");
         }
+        //3.检验是否修改的是标签，如果是，需要更新推荐用户列表，Cache Aside Pattern策略删除缓存
+        if(user.getTags()!=null){
+            String redisKey=String.format(RECOMMEND_USER_KEY+"%d",currentUser.getId());
+            redisTemplate.delete(redisKey);
+        }
         int result = userMapper.updateById(user);
         if(result==0){
             throw new BusinessException(ResultCodeEnum.SYSTEM_ERROR,"修改失败");
@@ -323,6 +328,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 //        User user = BeanUtil.fillBeanWithMap(userMap, new User(), false);
 //        user.setPassword("");
 //        return user;
+        //修改为从线程中获取
         User user=UserHolder.getUser();
         if(user==null){
             throw new BusinessException(ResultCodeEnum.NO_AUTH, "未登录");
@@ -336,8 +342,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             throw new BusinessException(ResultCodeEnum.IS_NULL,"参数为空");
         }
         //对于数据量庞大，查询需要花费较长时间时，使用缓存
-        User currentUser=getCurrentUser(request);
         //不同用户展现的数据不同，用redis的Key-Value存储在缓存中
+        User currentUser=getCurrentUser(request);
         String redisKey=String.format(RECOMMEND_USER_KEY+"%d",currentUser.getId());
         ValueOperations<String,Object> valueOperations=redisTemplate.opsForValue();
         List<Long> userIdList;

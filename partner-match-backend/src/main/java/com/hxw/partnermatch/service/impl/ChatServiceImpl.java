@@ -230,34 +230,38 @@ public class ChatServiceImpl extends ServiceImpl<ChatMapper, Chat>
         Long fromId = chat.getFromId();
         Integer type = chat.getType();
         ValueOperations<String,Object> valueOperations=redisTemplate.opsForValue();
-        //更新redis
-        if(type==0){
-            //消息的发送和接收方的聊天记录都要更新
-            String redisKey1=String.format(CHAT_RECORD_PRIVATE_KEY+"%d%d%d",toId,fromId,type);
-            List<Chat> chatList1=(List<Chat>) valueOperations.get(redisKey1);
-            if(chatList1!=null){
-                chatList1.add(chat);
-                valueOperations.set(redisKey1,chatList1,30000, TimeUnit.MILLISECONDS);
-            }
-            String redisKey2=String.format(CHAT_RECORD_PRIVATE_KEY+"%d%d%d",fromId,toId,type);
-            List<Chat> chatList2=(List<Chat>) valueOperations.get(redisKey2);
-            if(chatList2!=null){
-                chatList2.add(chat);
-                valueOperations.set(redisKey2,chatList2,30000, TimeUnit.MILLISECONDS);
-            }
-        }
-        else{
-            String redisKeyTeam=String.format(CHAT_RECORD_TEAM_KEY+"%d%d",toId,type);
-            List<Chat> chatListTeam=(List<Chat>) valueOperations.get(redisKeyTeam);
-            if(chatListTeam!=null){
-                chatListTeam.add(chat);
-                valueOperations.set(redisKeyTeam,chatListTeam,30000, TimeUnit.MILLISECONDS);
-            }
-        }
-        //更新mysql
+        //采用Cache Aside Pattern，频繁更新redis但不查询，是无用的，所以不更新redis，直接删除
+        //先更新数据库再删除缓存，因为操作数据库时间比缓存长，线程安全问题概率更低
+        //更新数据库
         boolean save = this.save(chat);
         if(!save){
             throw new BusinessException(ResultCodeEnum.SYSTEM_ERROR,"保存错误");
+        }
+        if(type==0){
+            //消息的发送和接收方的聊天记录都要更新
+            String redisKey1=String.format(CHAT_RECORD_PRIVATE_KEY+"%d%d%d",toId,fromId,type);
+//            List<Chat> chatList1=(List<Chat>) valueOperations.get(redisKey1);
+//            if(chatList1!=null){
+//                chatList1.add(chat);
+//                valueOperations.set(redisKey1,chatList1,30000, TimeUnit.MILLISECONDS);
+//            }
+            String redisKey2=String.format(CHAT_RECORD_PRIVATE_KEY+"%d%d%d",fromId,toId,type);
+//            List<Chat> chatList2=(List<Chat>) valueOperations.get(redisKey2);
+//            if(chatList2!=null){
+//                chatList2.add(chat);
+//                valueOperations.set(redisKey2,chatList2,30000, TimeUnit.MILLISECONDS);
+//            }
+            redisTemplate.delete(redisKey1);
+            redisTemplate.delete(redisKey2);
+        }
+        else{
+            String redisKeyTeam=String.format(CHAT_RECORD_TEAM_KEY+"%d%d",toId,type);
+//            List<Chat> chatListTeam=(List<Chat>) valueOperations.get(redisKeyTeam);
+//            if(chatListTeam!=null){
+//                chatListTeam.add(chat);
+//                valueOperations.set(redisKeyTeam,chatListTeam,30000, TimeUnit.MILLISECONDS);
+//            }
+            redisTemplate.delete(redisKeyTeam);
         }
         return Result.ok(save);
     }
