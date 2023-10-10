@@ -395,7 +395,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             //保存在缓存中
             try{
                 //注意设置缓存过期时间，redis内存不能无限期增加
-                valueOperations.set(redisKey,userIdList,30000, TimeUnit.MILLISECONDS);
+                valueOperations.set(redisKey,userIdList,CACHE_TTL, TimeUnit.MINUTES);
             } catch (Exception e){
                 log.error("redis set key error",e);
             }

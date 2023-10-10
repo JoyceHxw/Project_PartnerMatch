@@ -189,8 +189,14 @@ public class ChatServiceImpl extends ServiceImpl<ChatMapper, Chat>
                         .eq(Chat::getToId,currentUserId).eq(Chat::getFromId,userId));
         List<Chat> chatList1 = this.list(queryWrapper);
         try{
-            //注意设置缓存过期时间，redis内存不能无限期增加
-            valueOperations.set(redisKey,chatList1,30000, TimeUnit.MILLISECONDS);
+            //缓存穿透问题：将空值保存在缓存中，设置短的过期时间
+            if(chatList1==null){
+                valueOperations.set(redisKey,"",CACHE_NULL_TTL,TimeUnit.MINUTES);
+            }
+            else{
+                //注意设置缓存过期时间，redis内存不能无限期增加
+                valueOperations.set(redisKey,chatList1,CACHE_TTL, TimeUnit.MINUTES);
+            }
         } catch (Exception e){
             log.error("redis set key error",e);
         }
@@ -216,8 +222,14 @@ public class ChatServiceImpl extends ServiceImpl<ChatMapper, Chat>
         queryWrapper.eq(Chat::getType,type).eq(Chat::getToId,teamId);
         List<Chat> chatList1 = this.list(queryWrapper);
         try{
-            //注意设置缓存过期时间，redis内存不能无限期增加
-            valueOperations.set(redisKey,chatList1,30000, TimeUnit.MILLISECONDS);
+            //缓存穿透问题：将空值保存在缓存中，设置短的过期时间
+            if(chatList1==null){
+                valueOperations.set(redisKey,"",CACHE_NULL_TTL,TimeUnit.MINUTES);
+            }
+            else{
+                //注意设置缓存过期时间，redis内存不能无限期增加
+                valueOperations.set(redisKey,chatList1,CACHE_TTL, TimeUnit.MINUTES);
+            }
         } catch (Exception e){
             log.error("redis set key error",e);
         }

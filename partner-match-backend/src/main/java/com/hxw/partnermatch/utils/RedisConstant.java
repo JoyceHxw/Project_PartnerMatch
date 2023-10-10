@@ -33,4 +33,12 @@ public class RedisConstant {
      * 群聊记录
      */
     public static final String CHAT_RECORD_TEAM_KEY="hxw:partnermatch:chat:team:";
+    /**
+     * 缓存有效时间
+     */
+    public static final Long CACHE_TTL= 30L;
+    /**
+     * 空值有效时间
+     */
+    public static final Long CACHE_NULL_TTL= 2L;
 }

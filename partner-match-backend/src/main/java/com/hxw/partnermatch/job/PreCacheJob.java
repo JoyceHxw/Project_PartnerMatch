@@ -18,8 +18,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import static com.hxw.partnermatch.utils.RedisConstant.CACHE_USER_LOCK_KEY;
-import static com.hxw.partnermatch.utils.RedisConstant.RECOMMEND_USER_KEY;
+import static com.hxw.partnermatch.utils.RedisConstant.*;
 
 /**
  * 缓存预热，使第一次加载从内存中读取
@@ -59,7 +58,7 @@ public class PreCacheJob {
                     Page<User> userPage = userMapper.selectPage(page, queryWrapper);
                     try{
                         //注意设置缓存过期时间，redis内存不能无限期增加
-                        valueOperations.set(redisKey,userPage,30000, TimeUnit.MILLISECONDS);
+                        valueOperations.set(redisKey,userPage,CACHE_TTL, TimeUnit.MINUTES);
                     } catch (Exception e){
                         log.error("redis set key error",e);
                     }
