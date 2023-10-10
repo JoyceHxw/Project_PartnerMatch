@@ -72,4 +72,14 @@ public interface TeamService extends IService<Team> {
     Result deleteTeam(Long teamId, HttpServletRequest request);
 
 
+    /**
+     * 同一用户不能重复加入同一队伍
+     * 加悲观锁synchronized
+     * @param teamId
+     * @param userId
+     * @param team
+     * @param num
+     * @return
+     */
+    Result joinTeamOnce(Long teamId, Long userId, Team team, Integer num);
 }

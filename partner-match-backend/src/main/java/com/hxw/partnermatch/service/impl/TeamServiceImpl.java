@@ -18,12 +18,19 @@ import com.hxw.partnermatch.utils.Result;
 import com.hxw.partnermatch.utils.ResultCodeEnum;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.lang3.StringUtils;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
+import org.springframework.aop.framework.AopContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
+
+import static com.hxw.partnermatch.utils.RedisConstant.CACHE_USER_LOCK_KEY;
+import static com.hxw.partnermatch.utils.RedisConstant.JOIN_TEAM_LOCK_KEY;
 
 /**
 * @author 81086
@@ -42,6 +49,9 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
 
     @Autowired
     private TeamMapper teamMapper;
+
+    @Autowired
+    private RedissonClient redissonClient;
 
     @Override
     @Transactional(rollbackFor = Exception.class) //数据库事务回滚
@@ -226,7 +236,6 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public Result joinTeam(JoinTeamRequest joinTeamRequest, HttpServletRequest request) {
         if(joinTeamRequest==null){
             throw new BusinessException(ResultCodeEnum.IS_NULL,"传入参数为空");
@@ -255,18 +264,49 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
                 throw new BusinessException(ResultCodeEnum.PARAMS_ERROR,"密码错误");
             }
         }
-        //todo:需要加锁，防止多个线程不安全
-        //不能重复加入已加入的队伍
         User currentUser=userService.getCurrentUser(request);
         Long userId = currentUser.getId();
+
+        //不能重复加入已加入的队伍
+        //需要加锁，防止多个线程不安全，采用悲观锁
+        //针对同一用户和同一队伍加synchronized，锁到事务提交
+        //toString确保在多线程环境下，不同的 userId 对象产生的字符串在比较时是相等的。
+        //intern将指定的字符串对象的引用保存在字符串常量池中，确保只有一个相同内容的字符串对象存在于常量池中
+//        synchronized ((userId.toString()+ teamId).intern()){
+//            //直接调用而不是通过代理调用会使事务失效
+//            TeamService proxy =(TeamService) AopContext.currentProxy();
+//            return proxy.joinTeamOnce(teamId, userId, team, num);
+//        }
+
+        //采用redis分布式锁的方式
+        RLock lock=redissonClient.getLock(JOIN_TEAM_LOCK_KEY);
+        try {
+            boolean isLock = lock.tryLock(0, -1, TimeUnit.MILLISECONDS);
+            if(!isLock){
+                throw new BusinessException(ResultCodeEnum.SYSTEM_ERROR,"不能重复加入");
+            }
+            TeamService proxy =(TeamService) AopContext.currentProxy();
+            return proxy.joinTeamOnce(teamId, userId, team, num);
+        }catch (InterruptedException e) {
+            log.error("doCacheRecommendUser error",e);
+            throw new BusinessException(ResultCodeEnum.SYSTEM_ERROR,"分布式锁获取错误");
+        } finally {
+            lock.unlock();
+        }
+
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Result joinTeamOnce(Long teamId, Long userId, Team team, Integer num) {
         LambdaQueryWrapper<UserTeam> queryWrapperUT = new LambdaQueryWrapper<>();
-        queryWrapperUT.eq(UserTeam::getTeamId,teamId).eq(UserTeam::getUserId,userId);
+        queryWrapperUT.eq(UserTeam::getTeamId, teamId).eq(UserTeam::getUserId, userId);
         long count = userTeamService.count(queryWrapperUT);
         if(count>0){
             throw new BusinessException(ResultCodeEnum.PARAMS_ERROR,"已加入");
         }
         //修改队伍信息
-        team.setNum(num+1);
+        team.setNum(num +1);
         int result = teamMapper.updateById(team);
         if(result==0){
             throw new BusinessException(ResultCodeEnum.SYSTEM_ERROR,"加入失败");
